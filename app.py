@@ -152,7 +152,7 @@ elif menu == "Rekap Mingguan":
 # MENU 3: REKAP AKUMULASI
 # ---------------------------------------------------------
 elif menu == "Rekap Akumulasi":
-    st.title("📊 Rekap Akumulasi Ketidakhadiran Siswa")
+    st.subheader("📊 Rekap Akumulasi Ketidakhadiran Siswa")
     st.write(
         "Fitur ini digunakan untuk menghitung total ketidakhadiran siswa dalam rentang beberapa minggu."
     )
