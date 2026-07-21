@@ -21,7 +21,7 @@ except Exception as e:
 # 2. KONFIGURASI HALAMAN & NAVIGASI
 # ---------------------------------------------------------
 st.set_page_config(page_title="Rekap Presensi Mingguan", layout="wide")
-st.title("📋 Sistem Rekap Presensi Mingguan Siswa")
+st.title("📋 Rekap Presensi Mingguan Siswa RPL Skanada")
 
 menu = st.sidebar.selectbox("Pilih Menu", ["Input Presensi Mingguan", "Rekap & Laporan", "Kelola Data Siswa"])
 
