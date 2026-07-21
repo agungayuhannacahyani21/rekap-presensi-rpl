@@ -23,7 +23,7 @@ except Exception as e:
 st.set_page_config(page_title="Rekap Presensi Mingguan", layout="wide")
 st.title("📋 Rekap Presensi Mingguan Siswa RPL Skanada")
 
-menu = st.sidebar.selectbox("Pilih Menu", ["Input Presensi Mingguan", "Rekap & Laporan", "Kelola Data Siswa"])
+menu = st.sidebar.selectbox("Pilih Menu", ["Input Presensi Mingguan", "Rekap Mingguan", "Rekap Akumulasi", "Kelola Data Siswa"])
 
 # ---------------------------------------------------------
 # MENU 1: INPUT PRESENSI MINGGUAN
@@ -147,8 +147,117 @@ elif menu == "Rekap & Laporan":
     else:
         st.info("Belum ada data rekap presensi yang tersimpan.")
 
+
 # ---------------------------------------------------------
-# MENU 3: KELOLA DATA SISWA
+# MENU 3: REKAP AKUMULASI
+# ---------------------------------------------------------
+elif menu == "Rekap Akumulasi (Multi-Minggu)":
+    st.title("📊 Rekap Akumulasi Ketidakhadiran Siswa")
+    st.write(
+        "Fitur ini digunakan untuk menghitung total ketidakhadiran siswa dalam rentang beberapa minggu."
+    )
+
+    # 1. Ambil data daftar kelas dari tabel siswa
+    response_kelas = supabase.table("siswa").select("kelas").execute()
+    if response_kelas.data:
+        # Mengambil daftar kelas unik
+        daftar_kelas = sorted(
+            list(set([item["kelas"] for item in response_kelas.data]))
+        )
+
+        # Dropdown Pilih Kelas
+        kelas_terpilih = st.selectbox("Pilih Kelas:", daftar_kelas)
+
+        # 2. Ambil data presensi berdasarkan kelas terpilih
+        res_presensi = (
+            supabase.table("presensi_mingguan")
+            .select("*, siswa(nama)")
+            .eq("kelas", kelas_terpilih)
+            .execute()
+        )
+
+        data_presensi = res_presensi.data
+
+        if data_presensi:
+            # Mengubah hasil query Supabase menjadi Pandas DataFrame
+            import pandas as pd
+
+            df_list = []
+            for item in data_presensi:
+                df_list.append(
+                    {
+                        "Nama": item["siswa"]["nama"],
+                        "Minggu Ke": item["minggu_ke"],
+                        "Sakit": item.get("sakit", 0),
+                        "Izin": item.get("izin", 0),
+                        "Alfa": item.get("alfa", 0),
+                    }
+                )
+
+            df = pd.DataFrame(df_list)
+
+            # 3. Filter Rentang Minggu menggunakan Slider
+            min_mgu = int(df["Minggu Ke"].min())
+            max_mgu = int(df["Minggu Ke"].max())
+
+            st.write("---")
+            if min_mgu == max_mgu:
+                rentang_minggu = (min_mgu, max_mgu)
+                st.info(f"Data yang tersimpan saat ini baru untuk **Minggu Ke-{min_mgu}**.")
+            else:
+                rentang_minggu = st.slider(
+                    "Pilih Rentang Minggu:",
+                    min_value=min_mgu,
+                    max_value=max_mgu,
+                    value=(min_mgu, max_mgu),  # Default: pilih semua minggu
+                )
+
+            # Filter data berdasarkan rentang minggu yang dipilih pada slider
+            df_filtered = df[
+                (df["Minggu Ke"] >= rentang_minggu[0])
+                & (df["Minggu Ke"] <= rentang_minggu[1])
+            ]
+
+            # 4. Agregasi / Penjumlahan Data per Siswa
+            rekap_total = (
+                df_filtered.groupby("Nama")[["Sakit", "Izin", "Alfa"]]
+                .sum()
+                .reset_index()
+            )
+
+            # Hitung Total Tidak Hadir (S + I + A)
+            rekap_total["Total Tidak Hadir"] = (
+                rekap_total["Sakit"] + rekap_total["Izin"] + rekap_total["Alfa"]
+            )
+
+            # Urutkan berdasarkan Nama Siswa
+            rekap_total = rekap_total.sort_values(by="Nama")
+
+            # 5. Tampilkan Hasil Rekapitulasi
+            st.subheader(
+                f"Hasil Akumulasi Kelas {kelas_terpilih} (Minggu {rentang_minggu[0]} s/d {rentang_minggu[1]})"
+            )
+            st.dataframe(rekap_total, use_container_width=True)
+
+            # Tombol Download Excel/CSV
+            csv_data = rekap_total.to_csv(index=False).encode("utf-8")
+            st.download_button(
+                label="📥 Download Rekap Akumulasi (CSV)",
+                data=csv_data,
+                file_name=f"Rekap_Akumulasi_{kelas_terpilih}_Minggu_{rentang_minggu[0]}-{rentang_minggu[1]}.csv",
+                mime="text/csv",
+            )
+
+        else:
+            st.warning(
+                f"Belum ada data presensi yang diinput untuk kelas **{kelas_terpilih}**."
+            )
+    else:
+        st.error("Data kelas/siswa belum ditemukan di database.")
+
+
+# ---------------------------------------------------------
+# MENU 4: KELOLA DATA SISWA
 # ---------------------------------------------------------
 elif menu == "Kelola Data Siswa":
     st.subheader("➕ Tambah Data Siswa Manual")
