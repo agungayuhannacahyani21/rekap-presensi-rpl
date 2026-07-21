@@ -108,7 +108,7 @@ if menu == "Input Presensi Mingguan":
 # ---------------------------------------------------------
 # MENU 2: REKAP & LAPORAN
 # ---------------------------------------------------------
-elif menu == "Rekap & Laporan":
+elif menu == "Rekap Mingguan":
     st.subheader("📊 Laporan Rekapitulasi Presensi Mingguan")
     
     res_rekap = supabase.table("presensi_mingguan").select("*, siswa(nama)").execute()
@@ -151,7 +151,7 @@ elif menu == "Rekap & Laporan":
 # ---------------------------------------------------------
 # MENU 3: REKAP AKUMULASI
 # ---------------------------------------------------------
-elif menu == "Rekap Akumulasi (Multi-Minggu)":
+elif menu == "Rekap Akumulasi":
     st.title("📊 Rekap Akumulasi Ketidakhadiran Siswa")
     st.write(
         "Fitur ini digunakan untuk menghitung total ketidakhadiran siswa dalam rentang beberapa minggu."
