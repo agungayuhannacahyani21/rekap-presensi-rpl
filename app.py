@@ -268,7 +268,7 @@ elif menu == "Rekap Akumulasi":
 
             else:
                 st.warning(
-                    f"Belum ada data presensi yang tersimpan untuk kelas **{kelas_terpilih}** di tabel `presensi_mingguan`."
+                    f"Belum ada data presensi yang tersimpan untuk kelas **{kelas_terpilih}**."
                 )
 
         else:
