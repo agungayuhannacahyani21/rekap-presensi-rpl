@@ -339,12 +339,13 @@ elif menu == "Bimbingan Siswa":
             st.markdown(
                 """
                 <style>
-                /* Menyembunyikan teks instruksi di samping/bawah tombol upload */
-                [data-testid="stFileUploader"] small {
+                /* Menyembunyikan seluruh teks instruksi file uploader di Streamlit versi baru */
+                [data-testid="stFileUploaderDropzoneInstructions"] {
                     display: none !important;
                 }
-                /* Alternatif target jika elemen dibungkus div instruksi khusus */
-                [data-testid="stFileUploaderFileData"] {
+                
+                /* Backup: menyembunyikan kontainer teks di sebelah tombol upload */
+                [data-testid="stFileUploader"] section > div > div:nth-child(2) {
                     display: none !important;
                 }
                 </style>
