@@ -336,6 +336,23 @@ elif menu == "Bimbingan Siswa":
                 placeholder="Catatan penanganan atau hasil bimbingan...",
             )
 
+            # Tambahkan kode CSS ini untuk menyembunyikan instruksi bawaan file uploader
+            st.markdown(
+                """
+                <style>
+                [data-testid="stFileUploaderInstructions"] {
+                    display: none;
+                }
+                </style>
+            """,
+                unsafe_allow_html=True,
+            )
+
+# Kode st.file_uploader Anda tetap sama
+uploaded_file = st.file_uploader(
+    "Upload Foto Dokumentasi (Opsional)", type=["png", "jpg", "jpeg"]
+)
+
             uploaded_file = st.file_uploader(
                 "Upload Foto Dokumentasi (Opsional)",
                 type=["png", "jpg", "jpeg"],
