@@ -23,7 +23,7 @@ except Exception as e:
 st.set_page_config(page_title="Rekap Presensi Mingguan", layout="wide")
 st.title("📋 Rekap Presensi Mingguan Siswa RPL Skanada")
 
-menu = st.sidebar.selectbox("Pilih Menu", ["Input Presensi Mingguan", "Rekap Mingguan", "Rekap Akumulasi", "Kelola Data Siswa"])
+menu = st.sidebar.selectbox("Pilih Menu", ["Input Presensi Mingguan", "Rekap Mingguan", "Rekap Akumulasi", "Kelola Data Siswa", "Bimbingan Siswa"])
 
 # ---------------------------------------------------------
 # MENU 1: INPUT PRESENSI MINGGUAN
@@ -278,6 +278,188 @@ elif menu == "Rekap Akumulasi":
 
     except Exception as e:
         st.error(f"Terjadi kesalahan saat mengambil data dari database: {e}")
+
+# ---------------------------------------------------------
+# MENU BARU: BIMBINGAN SISWA
+# ---------------------------------------------------------
+elif menu == "Bimbingan Siswa":
+    st.subheader("🤝 Form Bimbingan & Konseling Siswa")
+
+    # 1. Ambil Data Kelas untuk Dropdown
+    res_kelas = supabase.table("siswa").select("kelas").execute()
+    list_kelas = (
+        sorted(list(set([k["kelas"] for k in res_kelas.data if k.get("kelas")])))
+        if res_kelas.data
+        else []
+    )
+
+    if not list_kelas:
+        st.warning(
+            "Belum ada data siswa/kelas. Tambahkan data siswa di menu 'Kelola Data Siswa' terlebih dahulu."
+        )
+    else:
+        col_k, col_s = st.columns(2)
+        with col_k:
+            pilih_kelas = st.selectbox("Pilih Kelas", list_kelas)
+
+        # Ambil daftar siswa berdasarkan kelas terpilih
+        res_siswa = (
+            supabase.table("siswa")
+            .select("id, nama")
+            .eq("kelas", pilih_kelas)
+            .order("nama")
+            .execute()
+        )
+        dict_siswa = (
+            {s["nama"]: s["id"] for s in res_siswa.data} if res_siswa.data else {}
+        )
+
+        with col_s:
+            pilih_nama = st.selectbox(
+                "Pilih Nama Siswa", list(dict_siswa.keys())
+            )
+
+        # Form Input Bimbingan
+        with st.form("form_bimbingan_siswa", clear_on_submit=True):
+            permasalahan = st.text_area(
+                "Permasalahan Siswa",
+                placeholder="Deskripsikan permasalahan siswa secara singkat...",
+            )
+
+            jenis_bimbingan = st.selectbox(
+                "Jenis Bimbingan",
+                ["Home Visit", "Surat Perjanjian", "Lainnya"],
+            )
+
+            keterangan = st.text_area(
+                "Keterangan / Tindak Lanjut",
+                placeholder="Catatan penanganan atau hasil bimbingan...",
+            )
+
+            uploaded_file = st.file_uploader(
+                "Upload Foto Dokumentasi (Opsional)",
+                type=["png", "jpg", "jpeg"],
+            )
+
+            submit_bimbingan = st.form_submit_button(
+                "💾 Simpan Data Bimbingan", use_container_width=True
+            )
+
+            if submit_bimbingan:
+                if not permasalahan:
+                    st.error("Kolom Permasalahan wajib diisi!")
+                else:
+                    foto_url = None
+
+                    # Proses Upload Foto ke Supabase Storage (Jika Ada)
+                    if uploaded_file is not None:
+                        try:
+                            file_bytes = uploaded_file.read()
+                            # Buat nama file unik berdasarkan timestamp & ID siswa
+                            import time
+
+                            file_ext = uploaded_file.name.split(".")[-1]
+                            file_name = f"bimbingan_{dict_siswa[pilih_nama]}_{int(time.time())}.{file_ext}"
+
+                            # Upload ke bucket 'dokumentasi-bimbingan'
+                            supabase.storage.from_(
+                                "dokumentasi-bimbingan"
+                            ).upload(
+                                file_name,
+                                file_bytes,
+                                {"content-type": uploaded_file.type},
+                            )
+
+                            # Ambil URL Publik File
+                            foto_url = supabase.storage.from_(
+                                "dokumentasi-bimbingan"
+                            ).get_public_url(file_name)
+                        except Exception as img_err:
+                            st.error(f"Gagal mengunggah foto: {img_err}")
+
+                    # Simpan Data ke Tabel Supabase
+                    data_bimbingan = {
+                        "siswa_id": dict_siswa[pilih_nama],
+                        "kelas": pilih_kelas,
+                        "permasalahan": permasalahan,
+                        "jenis_bimbingan": jenis_bimbingan,
+                        "keterangan": keterangan,
+                        "foto_url": foto_url,
+                    }
+
+                    try:
+                        supabase.table("bimbingan_siswa").insert(
+                            data_bimbingan
+                        ).execute()
+                        st.success(
+                            f"Data bimbingan untuk **{pilih_nama}** berhasil disimpan!"
+                        )
+                        st.balloons()
+                    except Exception as err:
+                        st.error(f"Gagal menyimpan data: {err}")
+
+        # ---------------------------------------------------------
+        # TAMPILKAN RIWAYAT BIMBINGAN SISWA
+        # ---------------------------------------------------------
+        st.divider()
+        st.subheader("📜 Riwayat Bimbingan Siswa")
+
+        try:
+            res_history = (
+                supabase.table("bimbingan_siswa")
+                .select("*, siswa(nama)")
+                .order("created_at", desc=True)
+                .execute()
+            )
+
+            if res_history.data:
+                # Filter Riwayat Berdasarkan Kelas
+                filter_k = st.selectbox(
+                    "Filter Riwayat Kelas",
+                    ["Semua Kelas"] + list_kelas,
+                    key="filter_riwayat_bimbingan",
+                )
+
+                hist_data = res_history.data
+                if filter_k != "Semua Kelas":
+                    hist_data = [
+                        item for item in hist_data if item["kelas"] == filter_k
+                    ]
+
+                if hist_data:
+                    for record in hist_data:
+                        nama_s = (
+                            record["siswa"]["nama"]
+                            if isinstance(record.get("siswa"), dict)
+                            else f"Siswa ID: {record['siswa_id']}"
+                        )
+
+                        with st.expander(
+                            f"📌 {nama_s} ({record['kelas']}) — {record['jenis_bimbingan']}"
+                        ):
+                            st.write(
+                                f"**Tanggal:** {record['created_at'][:10]}"
+                            )
+                            st.write(
+                                f"**Permasalahan:** {record['permasalahan']}"
+                            )
+                            st.write(
+                                f"**Keterangan:** {record.get('keterangan', '-')}"
+                            )
+
+                            if record.get("foto_url"):
+                                st.image(
+                                    record["foto_url"],
+                                    caption=f"Dokumentasi {nama_s}",
+                                    width=300,
+                                )
+                else:
+                    st.info("Tidak ada riwayat bimbingan untuk kelas ini.")
+            else:
+                st.info("Belum ada riwayat bimbingan yang tersimpan.")
+
+        except Exception as e:
+            st.error(f"Gagal memuat riwayat bimbingan: {e}")
 
 
 # ---------------------------------------------------------
