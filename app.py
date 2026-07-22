@@ -339,11 +339,16 @@ elif menu == "Bimbingan Siswa":
             st.markdown(
                 """
                 <style>
-                [data-testid="stFileUploaderInstructions"] {
-                    display: none;
+                /* Menyembunyikan teks instruksi di samping/bawah tombol upload */
+                [data-testid="stFileUploader"] small {
+                    display: none !important;
+                }
+                /* Alternatif target jika elemen dibungkus div instruksi khusus */
+                [data-testid="stFileUploaderFileData"] {
+                    display: none !important;
                 }
                 </style>
-            """,
+                """,
                 unsafe_allow_html=True,
             )
 
