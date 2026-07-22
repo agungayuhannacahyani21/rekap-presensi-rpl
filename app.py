@@ -339,6 +339,7 @@ elif menu == "Bimbingan Siswa":
             uploaded_file = st.file_uploader(
                 "Upload Foto Dokumentasi (Opsional)",
                 type=["png", "jpg", "jpeg"],
+                help="Maksimal ukuran file: 5MB per foto",
             )
 
             submit_bimbingan = st.form_submit_button(
